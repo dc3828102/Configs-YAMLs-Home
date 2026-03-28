@@ -1,0 +1,80 @@
+apiVersion: v1
+# PVC for Ollama to store its data without losing it when the pod is restarted or rescheduled 
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc-ollma
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: vcf-mgmt-cl01-vsan-storage-policy #Change to your storage class name
+  resources:
+    requests:
+      storage: 150Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        resources:
+          requests:
+            memory: "14Gi"   # This is your "Reservation"
+          limits:
+            memory: "24Gi"   # This is your "Hard Cap"
+        ports:
+        - containerPort: 11434
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsUser: 1000
+        env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0"
+        - name: OLLAMA_HOME
+          value: "/tmp/ollama"
+        - name: HOME
+          value: "/tmp/ollama"
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /tmp/ollama
+      volumes:
+      - name: ollama-data
+        persistentVolumeClaim:
+          claimName: my-pvc-ollma
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: default
+spec:
+  type: LoadBalancer
+  #type: ClusterIP
+  selector:
+    app: ollama
+  ports:
+  - name: http
+    port: 80
+    targetPort: 11434
