@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: open-webui-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi # Stores your chat history and uploaded docs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-webui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-webui
+  template:
+    metadata:
+      labels:
+        app: open-webui
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: open-webui
+        image: ghcr.io/open-webui/open-webui:main
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsUser: 1000
+        env:
+        - name: OLLAMA_BASE_URL
+          # REPLACE THIS with your Ollama Service DNS or LB IP
+          value: "http://ollama-deployment:11434" 
+        - name: WEBUI_AUTH
+          value: "true" # Enables the login screen
+        - name: WEBUI_SECRET_KEY
+          value: "c2bf91496a495d573556ae2acbf50fea4ae381471412056053bd82ae87a3cdc1"
+        volumeMounts:
+        - name: webui-data
+          mountPath: /app/backend/data
+        - name: static-cache
+          mountPath: /app/backend/open_webui/static # New mount point
+        - name: tmp-dir
+          mountPath: /tmp # This provides the missing "usable temporary directory"
+      volumes:
+      - name: webui-data
+        persistentVolumeClaim:
+          claimName: open-webui-pvc
+      - name: static-cache
+        emptyDir: {} # This creates a temporary writable space in RAM/Disk
+      - name: tmp-dir
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-webui-http
+spec:
+  type: LoadBalancer 
+  ports:
+  - port: 80          # Access via http://<external-ip>
+    targetPort: 8080  # Internal port for Open WebUI
+  selector:
+    app: open-webui
