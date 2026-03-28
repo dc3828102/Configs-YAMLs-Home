@@ -7,7 +7,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: vcf-mgmt-cl01-vsan-storage-policy #Change to your storage class name
+  #Change to your storage class name
+  storageClassName: vcf-mgmt-cl01-vsan-storage-policy
   resources:
     requests:
       storage: 150Gi
@@ -36,6 +37,7 @@ spec:
       - name: ollama
         image: ollama/ollama:latest
         resources:
+        # Set the limits such that it doesn't violate the VM class defined - otherwise, forced evictions occur
           requests:
             memory: "14Gi"   # This is your "Reservation"
           limits:
