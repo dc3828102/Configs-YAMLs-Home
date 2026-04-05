@@ -1,0 +1,171 @@
+apiVersion: v1
+# PVC for Ollama to store its data without losing it when the pod is restarted or rescheduled 
+kind: PersistentVolumeClaim
+metadata:
+  name: my-pvc-ollma
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  #Change to your storage class name
+  storageClassName: vcf-mgmt-cl01-vsan-storage-policy
+  resources:
+    requests:
+      storage: 150Gi
+---
+apiVersion: v1
+#PVC section to ensure that the data stays when clusters restart
+kind: PersistentVolumeClaim
+metadata:
+  name: open-webui-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi # Stores your chat history and uploaded docs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ollama
+        image: ollama/ollama:latest
+        resources:
+        # Set the limits such that it doesn't violate the VM class defined - otherwise, forced evictions occur
+          requests:
+            memory: "14Gi"   # This is your "Reservation"
+          limits:
+            memory: "24Gi"   # This is your "Hard Cap"
+        ports:
+        - containerPort: 11434
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsUser: 1000
+        env:
+        - name: OLLAMA_HOST
+          value: "0.0.0.0"
+        - name: OLLAMA_HOME
+          value: "/tmp/ollama"
+        - name: HOME
+          value: "/tmp/ollama"
+        volumeMounts:
+        - name: ollama-data
+          mountPath: /tmp/ollama
+      volumes:
+      - name: ollama-data
+        persistentVolumeClaim:
+          claimName: my-pvc-ollma
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ollama-service
+  namespace: default
+spec:
+  type: LoadBalancer
+  #type: ClusterIP
+  selector:
+    app: ollama
+  ports:
+  - name: http
+    port: 80
+    targetPort: 11434
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: open-webui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: open-webui
+  template:
+    metadata:
+      labels:
+        app: open-webui
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: open-webui
+        image: ghcr.io/open-webui/open-webui:main
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsUser: 1000
+        env:
+        - name: OLLAMA_BASE_URL
+          # REPLACE THIS with your Ollama Service DNS or LB IP
+          value: "http://ollama-service:80" 
+        - name: WEBUI_AUTH
+          value: "true" # Enables the login screen
+        - name: WEBUI_AUTH
+          value: "true"
+         # Replace the value with your own - 'openssl rand -hex 32'
+        - name: WEBUI_SECRET_KEY
+          value: "your-stable-hex-code-here" # Must be stable!
+        - name: WEBUI_SESSION_COOKIE_SAME_SITE
+          value: "lax"
+        - name: WEBUI_SESSION_COOKIE_SECURE
+          value: "false"
+        - name: XDG_CACHE_HOME
+          value: "/tmp/.cache"
+        volumeMounts:
+        - name: webui-data
+          mountPath: /app/backend/data
+        - name: static-cache
+          mountPath: /app/backend/open_webui/static # New mount point
+        - name: tmp-dir
+          mountPath: /tmp # This provides the missing "usable temporary directory"
+      volumes:
+      - name: webui-data
+        persistentVolumeClaim:
+          claimName: open-webui-pvc
+      - name: static-cache
+        emptyDir: {} # This creates a temporary writable space in RAM/Disk
+      - name: tmp-dir
+        emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: open-webui-http
+spec:
+  type: LoadBalancer 
+  ports:
+  - port: 80          # Access via http://<external-ip>
+    targetPort: 8080  # Internal port for Open WebUI
+  selector:
+    app: open-webui
