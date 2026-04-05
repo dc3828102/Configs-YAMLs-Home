@@ -44,7 +44,7 @@ spec:
         env:
         - name: OLLAMA_BASE_URL
           # REPLACE THIS with your Ollama Service DNS or LB IP
-          value: "http://ollama-deployment:80" 
+          value: "http://ollama-service:80" 
         - name: WEBUI_AUTH
           value: "true" # Enables the login screen
          # Replace the value with your own - 'openssl rand -hex 32'
