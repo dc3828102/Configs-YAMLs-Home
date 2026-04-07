@@ -1,0 +1,279 @@
+{
+  "version": "9.1.0.0",
+  "vcfInstanceName": "Edgar 30 VCF 9.1",
+  "sddcId": "vcf-mgmt",
+  "ceipEnabled": false,
+  "skipEsxThumbprintValidation": true,
+  "skipGatewayPingValidation": true,
+  "workflowType": "VCF",
+  "dnsSpec": {
+    "subdomain": "vcf.lab",
+    "nameservers": [
+      "192.168.50.21"
+    ]
+  },
+  "ntpServers": [
+    "104.167.215.195"
+  ],
+  "hostSpecs": [
+    {
+      "hostname": "esx01.vcf.lab",
+      "credentials": {
+        "username": "root",
+        "password": "VMware1!"
+      }
+    },
+    {
+      "hostname": "esx02.vcf.lab",
+      "credentials": {
+        "username": "root",
+        "password": "VMware1!"
+      }
+    },
+    {
+      "hostname": "esx03.vcf.lab",
+      "credentials": {
+        "username": "root",
+        "password": "VMware1!"
+      }
+    }
+  ],
+  "networkSpecs": [
+    {
+      "networkType": "MANAGEMENT",
+      "ipAddressVersion": "IPv4",
+      "subnet": "172.30.0.0/24",
+      "gateway": "172.30.0.1",
+      "vlanId": "30",
+      "activeUplinks": [
+        "uplink1"
+      ],
+      "portGroupKey": "DVPG_FOR_MANAGEMENT",
+      "standbyUplinks": [],
+      "teamingPolicy": "loadbalance_loadbased"
+    },
+    {
+      "networkType": "VM_MANAGEMENT",
+      "ipAddressVersion": "IPv4",
+      "subnet": "172.30.0.0/24",
+      "gateway": "172.30.0.1",
+      "vlanId": "30",
+      "activeUplinks": [
+        "uplink1"
+      ],
+      "portGroupKey": "DVPG_FOR_VM_MANAGEMENT",
+      "standbyUplinks": [],
+      "teamingPolicy": "loadbalance_loadbased"
+    },
+    {
+      "networkType": "VMOTION",
+      "ipAddressVersion": "IPv4",
+      "subnet": "172.30.40.0/24",
+      "gateway": "172.30.40.1",
+      "vlanId": "40",
+      "mtu": 9000,
+      "includeIpAddressRanges": [
+        {
+          "startIpAddress": "172.30.40.10",
+          "endIpAddress": "172.30.40.40"
+        }
+      ],
+      "activeUplinks": [
+        "uplink1"
+      ],
+      "portGroupKey": "DVPG_FOR_VMOTION",
+      "standbyUplinks": [],
+      "teamingPolicy": "loadbalance_loadbased"
+    },
+    {
+      "networkType": "VSAN",
+      "ipAddressVersion": "IPv4",
+      "subnet": "172.30.50.0/24",
+      "gateway": "172.30.50.1",
+      "vlanId": "50",
+      "mtu": 9000,
+      "includeIpAddressRanges": [
+        {
+          "startIpAddress": "172.30.50.2",
+          "endIpAddress": "172.30.50.4"
+        }
+      ],
+      "activeUplinks": [
+        "uplink1"
+      ],
+      "portGroupKey": "DVPG_FOR_VSAN",
+      "standbyUplinks": [],
+      "teamingPolicy": "loadbalance_loadbased"
+    }
+  ],
+  "vspClusterSpec": {
+    "ipv4Pool": {
+      "ipRange": {
+        "startIpAddress": "172.30.0.32",
+        "endIpAddress": "172.30.0.46"
+      }
+    },
+    "platformFqdn": "vcf-msr01.vcf.lab",
+    "instanceFqdn": "vcf-int01.vcf.lab",
+    "fleetFqdn": "vcf-flt01.vcf.lab",
+    "size": "small",
+    "name": "vcf-mgmt-vmsp-01",
+    "internalClusterCidrIpv4": "198.18.0.0/15"
+  },
+  "vcfAutomationSpec": {
+    "ipPool": [
+      "172.30.0.65",
+      "172.30.0.66",
+      "172.30.0.67",
+      "172.30.0.68",
+      "172.30.0.69",
+      "172.30.0.70"
+    ],
+    "hostname": "auto01.vcf.lab",
+    "platformFqdn": "vcf-asr01.vcf.lab",
+    "nodePrefix": "vcf-mgmt-node-01",
+    "internalClusterCidr": "198.18.0.0/15",
+    "useExistingDeployment": false,
+    "size": "small"
+  },
+  "nsxtSpec": {
+    "vipFqdn": "nsx01.vcf.lab",
+    "transportVlanId": "60",
+    "ipAddressPoolSpec": {
+      "name": "vcf-mgmt-cl01-tep01",
+      "description": "vcf-mgmt-cl01-tep01 descr",
+      "subnets": [
+        {
+          "cidr": "172.30.60.0/24",
+          "gateway": "172.30.60.1",
+          "ipAddressPoolRanges": [
+            {
+              "start": "172.30.60.10",
+              "end": "172.30.60.20"
+            }
+          ]
+        }
+      ]
+    },
+    "nsxtManagerSize": "medium",
+    "useExistingDeployment": false,
+    "vpcSpec": {
+      "dtgwSpec": {
+        "vlan": "70",
+        "gatewayCidr": "172.30.70.1/24",
+        "externalIpBlockCidr": "172.30.70.0/24",
+        "privateTgwIpBlockCidr": "172.31.0.0/16"
+      }
+    },
+    "nsxtManagers": [
+      {
+        "hostname": "nsx01a.vcf.lab"
+      }
+    ]
+  },
+  "vcfOperationsSpec": {
+    "applianceSize": "small",
+    "useExistingDeployment": false,
+    "nodes": [
+      {
+        "hostname": "vcf01.vcf.lab",
+        "type": "master"
+      }
+    ]
+  },
+  "vcfOperationsCollectorSpec": {
+    "applianceSize": "small",
+    "hostname": "vcf-proxy01.vcf.lab",
+    "useExistingDeployment": false
+  },
+  "licenseServerSpec": {
+    "hostname": "vcf-lic01.vcf.lab"
+  },
+  "vidbSpec": {
+    "hostname": "vcf-idb01.vcf.lab"
+  },
+  "saltSpec": {},
+  "saltRaasSpec": {},
+  "telemetryAcceptorSpec": {},
+  "fleetLcmSpec": {
+    "hostname": "vcf-flt01.vcf.lab"
+  },
+  "sddcLcmSpec": {
+    "hostname": "vcf-int01.vcf.lab"
+  },
+  "fleetDepotSpec": {},
+  "vcenterSpec": {
+    "vcenterHostname": "vc01.vcf.lab",
+    "adminUserSsoPassword": "VMware1!VMware1!",
+    "vmSize": "small",
+    "storageSize": "lstorage",
+    "ssoDomain": "vsphere.local",
+    "useExistingDeployment": false
+  },
+  "clusterSpec": {
+    "datacenterName": "vcf-mgmt-dc01",
+    "clusterName": "vcf-mgmt-cl01"
+  },
+  "datastoreSpec": {
+    "vsanSpec": {
+      "vsanDedup": false,
+	  "compressionOnly": false,
+      "failuresToTolerate": 1,
+      "esaConfig": {
+        "enabled": true
+      },
+      "datastoreName": "vsanDatastore",
+      "encryptionConfig": {
+        "dataInTransitConfig": {
+          "enable": false
+        }
+      }
+    }
+  },
+  "dvsSpecs": [
+    {
+      "dvsName": "vcf-mgmt-cl01-vds01",
+      "networks": [
+        "MANAGEMENT",
+        "VM_MANAGEMENT",
+        "VMOTION",
+        "VSAN"
+      ],
+      "mtu": 9000,
+      "nsxtSwitchConfig": {
+        "transportZones": [
+          {
+            "name": "overlay-tz-mgmt-nsxt",
+            "transportType": "OVERLAY"
+          },
+		  {
+			"transportType": "VLAN",
+			"name": "vcf-vlan-TZ"
+		  }
+        ],
+        "hostSwitchOperationalMode": "ENS"
+      },
+      "vmnicsToUplinks": [
+        {
+          "id": "vmnic1",
+          "uplink": "uplink1"
+        }
+      ],
+      "nsxTeamings": [
+        {
+          "policy": "LOADBALANCE_SRCID",
+          "activeUplinks": [
+            "uplink1"
+          ],
+          "standByUplinks": null
+        }
+      ],
+      "lagSpecs": null
+    }
+  ],
+  "sddcManagerSpec": {
+    "hostname": "sddcm01.vcf.lab",
+    "localUserPassword": "VMware1!VMware1!",
+    "useExistingDeployment": true
+  }
+}
