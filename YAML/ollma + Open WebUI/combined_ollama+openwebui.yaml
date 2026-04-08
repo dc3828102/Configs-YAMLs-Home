@@ -130,8 +130,6 @@ spec:
           value: "http://ollama-service:80" 
         - name: WEBUI_AUTH
           value: "true" # Enables the login screen
-        - name: WEBUI_AUTH
-          value: "true"
          # Replace the value with your own - 'openssl rand -hex 32'
         - name: WEBUI_SECRET_KEY
           value: "your-stable-hex-code-here" # Must be stable!
