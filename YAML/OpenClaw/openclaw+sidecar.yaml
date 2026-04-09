@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-service
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app: openclaw
+  ports:
+    - name: dashboard
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate 
+  selector:
+    matchLabels:
+      app: openclaw
+  template:
+    metadata:
+      labels:
+        app: openclaw
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      # --- THE SIDECAR PROXY ---
+      - name: nginx-proxy
+        image: nginxinc/nginx-unprivileged:alpine
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 101
+          capabilities:
+            drop: ["ALL"]
+          seccompProfile:
+            type: RuntimeDefault
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            # Define a config that uses /tmp for EVERYTHING (PID, body, proxy, etc)
+            cat <<EOF > /tmp/nginx.conf
+            pid /tmp/nginx.pid;
+            events { worker_connections 1024; }
+            http {
+                client_body_temp_path /tmp/client_temp;
+                proxy_temp_path       /tmp/proxy_temp;
+                fastcgi_temp_path     /tmp/fastcgi_temp;
+                uwsgi_temp_path       /tmp/uwsgi_temp;
+                scgi_temp_path        /tmp/scgi_temp;
+                
+                server {
+                    listen 8080;
+                    location / {
+                        proxy_pass http://127.0.0.1:18789;
+                        proxy_http_version 1.1;
+                        proxy_set_header Upgrade \$http_upgrade;
+                        proxy_set_header Connection "upgrade";
+                        proxy_set_header Host \$host;
+                    }
+                }
+            }
+            EOF
+            nginx -c /tmp/nginx.conf -g "daemon off;"
+      
+      # --- THE APP ---
+      - name: openclaw
+        image: ghcr.io/phioranex/openclaw-docker:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            cd /app
+            mkdir -p /home/node/.openclaw
+            exec npm start -- gateway --port 18789 --allow-unconfigured
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop: ["ALL"]
+          seccompProfile:
+            type: RuntimeDefault
+        ports:
+        - containerPort: 18789
+        volumeMounts:
+        - name: data-storage
+          mountPath: /home/node/.openclaw
+      volumes:
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: openclaw-pvc
