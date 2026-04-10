@@ -33,6 +33,16 @@ spec:
         runAsNonRoot: true
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+      - name: fix-permissions
+        image: busybox
+        command: ["sh", "-c", "chown -R 1000:1000 /home/node/.openclaw"]
+        securityContext:
+          runAsUser: 0
+          privileged: true # vSphere might require this for init scripts
+        volumeMounts:
+        - name: data-storage
+          mountPath: /home/node/.openclaw
       containers:
       # --- THE SIDECAR PROXY ---
       - name: nginx-proxy
