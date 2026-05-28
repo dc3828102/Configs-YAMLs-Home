@@ -1,0 +1,54 @@
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: Cluster
+metadata:
+  # Rename as appropriate
+  name: kubernetes-cluster-y3z6
+  namespace: ns-02
+spec:
+  clusterNetwork:
+    # Required for v1beta2: Adjust these CIDRs if they conflict with your local NSX setup
+    pods:
+      cidrBlocks: ["192.168.0.0/16"]
+    services:
+      cidrBlocks: ["10.96.0.0/12"]
+    serviceDomain: cluster.local
+  topology:
+    classRef:
+      name: builtin-generic-v3.6.0       # Fixed structural field path
+    version: v1.34.2+vmware.2
+    controlPlane:
+      replicas: 1
+      metadata:
+        annotations:
+          run.tanzu.vmware.com/resolve-os-image: >-
+            os-name=ubuntu, content-library=cl-a6619c179813d35b2,
+            os-version=22.04
+    workers:
+      machineDeployments:
+      - class: node-pool
+        name: gpu-pool
+        replicas: 1
+        metadata:
+          annotations:
+            run.tanzu.vmware.com/resolve-os-image: >-
+              os-name=ubuntu, content-library=cl-a6619c179813d35b2,
+              os-version=22.04
+        variables:
+          overrides:
+          - name: vmClass
+            value: 8vcpu32gbram-gpu      # Applies your Guaranteed GPU class directly to the worker pool
+    variables:
+    - name: vmClass
+      value: best-effort-medium           # Standard non-GPU class for your Control Plane VM - replace with a VM class added
+    - name: storageClass
+      value: vcf-wl-cl01-optimal-datastore-default-policy-autoraid   # Replace with your working vSphere Storage Policy name
+    - name: vsphereOptions
+      value:
+        persistentVolumes:
+          defaultStorageClass: vcf-wl-cl01-optimal-datastore-default-policy-autoraid  # Replace with your working vSphere Storage Policy name
+    - name: volumes
+      value:
+        - name: vol-5q39
+          mountPath: /var/lib/containerd
+          storageClass: vcf-wl-cl01-optimal-datastore-default-policy-autoraid # Replace with your working vSphere Storage Policy name
+          capacity: 200Gi
