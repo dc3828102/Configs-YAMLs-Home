@@ -1,0 +1,22 @@
+0. Execute following commands with kubecofing file placed as .kube/config
+
+1. Add Nvidia to the Helm Chart
+helm repo add nvidia https://helm.ngc.nvidia.com/nvidia && helm repo update
+
+2. Create the namespace for gpu-operator with proper privileges
+kubectl create namespace gpu-operator
+kubectl label ns gpu-operator pod-security.kubernetes.io/enforce=privileged --overwrite
+kubectl label ns gpu-operator pod-security.kubernetes.io/audit=privileged --overwrite
+kubectl label ns gpu-operator pod-security.kubernetes.io/warn=privileged --overwrite
+
+3. Install gpu-operator, takes about 10 or so minutes to finish
+helm install nvidia-gpu-operator nvidia/gpu-operator \
+  -n gpu-operator \
+  --set driver.enabled=true \
+  --set driver.kernelModuleType=open \
+  --set driver.version="595.91.07" \ 
+  --wait
+  
+4. Get the name of the pod first and when nvidia-smi displays the GPU information, the GPU is now properly fired up
+kubectl get pods -n gpu-operator | grep nvidia-driver
+kubectl exec -n gpu-operator -c nvidia-driver-ctr <YOUR-DRIVER-POD-NAME> -- nvidia-smi
