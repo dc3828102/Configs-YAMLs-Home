@@ -7,7 +7,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  #Update to appropriate SC
+  # Update to appropriate SC
   storageClassName: vcf-mgmt-cl01-optimal-datastore-default-policy-autoraid
   resources:
     requests:
