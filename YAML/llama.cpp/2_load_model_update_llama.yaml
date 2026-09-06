@@ -1,0 +1,108 @@
+# You need to download the model to the pod that's running llama.cpp and load the model to cpp
+# kubectl exec -it deployment/local-ai-stack -c llama-backend -- \
+# curl -L -# -o /models/Qwen3.8-27B-UD-Q4_K_M.gguf https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/Qwen3.8-27B-UD-Q4_K_M.gguf
+# Downloads Qwen 3.8 to the pod
+# After the manifest runs, give it 3 - 4 minutes and run the following commnad (update the ip address to the endpoint ip address
+# curl http://172.30.70.11:8080/v1/models
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-storage-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: vcf-mgmt-cl01-optimal-datastore-default-policy-autoraid
+  resources:
+    requests:
+      storage: 150Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-ai-stack
+  labels:
+    app: ai-stack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ai-stack
+  template:
+    metadata:
+      labels:
+        app: ai-stack
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        # Change fsGroupChangePolicy so Kubernetes recursively updates permissions
+        # on the mounted volume for UID/GID 1000 on pod startup
+        fsGroupChangePolicy: "Always"
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+      # --- CONTAINER 1: LLAMA.CPP SERVER (CUDA / NVIDIA Version) ---
+      - name: llama-backend
+        image: ghcr.io/ggml-org/llama.cpp:server-cuda
+        imagePullPolicy: IfNotPresent
+        args:
+        #This loads up Qwen 3.8 into the GPU - change to a different model as needed
+        - "-m"
+        - "/models/Qwen3.8-27B-UD-Q4_K_M.gguf"
+        - "-ngl"
+        - "99"
+        - "--ctx-size"
+        - "100000"
+        - "--host"
+        - "0.0.0.0"
+        - "--port"
+        - "8080"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - containerPort: 8080
+          name: llama-api
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+            memory: 24Gi
+            cpu: "6"
+          requests:
+            nvidia.com/gpu: "1"
+            memory: 8Gi
+            cpu: "4"
+        volumeMounts:
+        - name: shared-storage
+          mountPath: /models
+          subPath: models-data
+
+      # --- VOLUMES DEFINITION ---
+      volumes:
+      - name: shared-storage
+        persistentVolumeClaim:
+          claimName: model-storage-pvc
+---
+# --- LOAD BALANCER SERVICE ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-stack-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+    targetPort: llama-api
+    protocol: TCP
+    name: backend-api
+  selector:
+    app: ai-stack
+
