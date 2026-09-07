@@ -1,0 +1,18 @@
+{
+  "providers": {
+    "vks-llama": {
+      "baseUrl": "http://172.30.70.11:8080/v1",
+      "api": "openai-completions",
+      "apiKey": "not-needed",
+      "models": [
+        {
+          "id": "Qwen3.8-27B-UD-Q4_K_M",
+          "input": [
+            "text"
+          ],
+          "contextWindow": 131072
+        }
+      ]
+    }
+  }
+}
